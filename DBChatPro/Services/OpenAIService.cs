@@ -18,7 +18,7 @@ namespace DBChatPro.Services
             //string openAIDeploymentName = "your-model-deployment-name";
 
             // Crear el cliente de OpenAI con la clave
-            var api = new OpenAIClient("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");
+            var api = new OpenAIClient("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");
 
             // Crear el cliente de chat de OpenAI
             var chatClient = api.GetChatClient("gpt-4o-mini");
@@ -26,7 +26,7 @@ namespace DBChatPro.Services
             List<ChatMessage> chatHistory = new List<ChatMessage>();
             var builder = new StringBuilder();
 
-            builder.AppendLine("Your are a helpful, cheerful database assistant. Do not respond with any information unrelated to databases or queries. Use the following database schema when creating your answers:");
+            builder.AppendLine("You are a expert assistant who knows how to write expert queries in Microsoft SQL Server. The commands to use must work fine in SQL Server. All the queries must use T-SQL commands. Do not respond with any information unrelated to databases or queries. Use the following database schema when creating your answers:");
 
             foreach(var table in aiConnection.SchemaRaw)
             {
@@ -39,9 +39,11 @@ namespace DBChatPro.Services
             builder.AppendLine("Output ONLY JSON formatted on a single line. Do not use new line characters.");
             builder.AppendLine(@"In the preceding JSON response, substitute ""your-query"" with Microsoft SQL Server Query to retrieve the requested data.");
             builder.AppendLine(@"In the preceding JSON response, substitute ""your-summary"" with an explanation of each step you took to create this query in a detailed paragraph.");
-            builder.AppendLine("Do not use MySQL syntax.");
-            builder.AppendLine("Always limit the SQL Query to 100 rows.");
+            builder.AppendLine("Do not use MySQL or PostgreSQL syntax.");
             builder.AppendLine("Always include all of the table columns and details.");
+            
+            // builder.AppendLine("Always limit the SQL Query to 100 rows.");
+
 
             // Build the AI chat/prompts
             chatHistory.Add(new SystemChatMessage(builder.ToString()));

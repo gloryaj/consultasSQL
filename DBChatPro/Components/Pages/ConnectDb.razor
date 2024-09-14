@@ -171,7 +171,8 @@
                   AND (o.Name LIKE 'FACTURA%' -- Filtrar tablas que empiecen con FACTURA
                        OR o.Name LIKE 'ARTICULO%' -- Filtrar tablas que empiecen con ARTICULO
                        OR o.Name LIKE 'PROVEEDOR%' -- Filtrar tablas que empiecen con PROVEEDOR
-                       OR o.Name LIKE 'PEDIDO%') -- Filtrar tablas que empiecen con PEDIDO
+                       OR o.Name LIKE 'PEDIDO%' -- Filtrar tablas que empiecen con PEDIDO
+                       OR o.Name LIKE 'DOCUMENTO%') -- Filtrar tablas DOCUMENTOS_CP, DOCUMENTOS_CC y otros documentos
                 ORDER BY o.Name";
 
 

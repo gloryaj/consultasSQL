@@ -4,6 +4,7 @@
 @using System.Text.Json
 @using System.Text
 @using DBChatPro.Models
+@using System.Data
 @inject ISnackbar Snackbar
 <PageTitle>Home</PageTitle>
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Fixed="false">
@@ -97,7 +98,7 @@
                             <MudButton @onclick="EditQuery" Class="my-6" Variant="Variant.Filled" Color="Color.Primary">Execute</MudButton>
                         </div>
                     </MudTabPanel>
-                    <MudTabPanel Text="Insights">
+                    <MudTabPanel Text="Summary">
                         @if (!string.IsNullOrEmpty(Summary))
                         {
                             <p Class="my-6">@Summary</p>
@@ -272,10 +273,13 @@
             var aiResponse = await OpenAIService.GetAISQLQuery(Prompt, ActiveConnection);
 
             Query = aiResponse.query;
-            Summary = aiResponse.summary;
+            Summary = aiResponse.summary; 
 
             LoadingMessage = "Running the Database query...";
-            RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);
+            RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);//rowdara es una lista de cadenas de texto
+
+            // Generar un resumen basado en los resultados obtenidos
+            //Summary = GenerateSummary(RowData);
 
             Loading = false;
             HistoryService.SaveQuery(Prompt, ActiveConnection.Name);
@@ -289,5 +293,109 @@
             Loading = false;
             LoadingMessage = String.Empty;
         }
+    }
+
+    //no se esta utulizando
+    public string GenerateSummary(List<List<string>> rowData)
+    {
+        StringBuilder summaryBuilder = new StringBuilder();
+
+        // Verifica si hay datos
+        if (rowData == null || rowData.Count == 0)
+        {
+            return "No data was provided.";
+        }
+
+        // La primera fila contiene los nombres de las columnas
+        List<string> columnNames = rowData[0];
+        int rowCount = rowData.Count - 1; // Excluye los nombres de las columnas
+        summaryBuilder.AppendLine($"La consulta devolvió {rowCount} registros.");
+
+        if (rowCount > 0)
+        {
+            // Inicializa estructuras para analizar los datos
+            var numericColumns = new Dictionary<string, List<decimal>>();
+            var stringColumns = new Dictionary<string, List<string>>();
+            var dateColumns = new Dictionary<string, List<DateTime>>();
+
+            // Recorre cada columna
+            for (int i = 0; i < columnNames.Count; i++)
+            {
+                var currentColumn = columnNames[i];
+                var numericValues = new List<decimal>();
+                var stringValues = new List<string>();
+                var dateValues = new List<DateTime>();
+
+                // Recorre cada fila (excluyendo la primera fila de encabezados)
+                for (int j = 1; j < rowData.Count; j++)
+                {
+                    var value = rowData[j][i];
+
+                    // Intenta determinar el tipo de dato de la columna
+                    if (decimal.TryParse(value, out decimal numericResult))
+                    {
+                        numericValues.Add(numericResult);
+                    }
+                    else if (DateTime.TryParse(value, out DateTime dateResult))
+                    {
+                        dateValues.Add(dateResult);
+                    }
+                    else
+                    {
+                        stringValues.Add(value);
+                    }
+                }
+
+                // Clasifica las columnas según el tipo de dato detectado
+                if (numericValues.Count > 0)
+                {
+                    numericColumns[currentColumn] = numericValues;
+                }
+                else if (dateValues.Count > 0)
+                {
+                    dateColumns[currentColumn] = dateValues;
+                }
+                else
+                {
+                    stringColumns[currentColumn] = stringValues;
+                }
+            }
+
+            // Analiza las columnas numéricas
+            foreach (var column in numericColumns)
+            {
+                decimal total = column.Value.Sum();
+                decimal average = column.Value.Average();
+                decimal max = column.Value.Max();
+                decimal min = column.Value.Min();
+
+                summaryBuilder.AppendLine($"Column '{column.Key}' - Total: {total}, Average: {average}, Max: {max}, Min: {min}.");
+            }
+
+            // Analiza las columnas de texto
+            foreach (var column in stringColumns)
+            {
+                var mostFrequent = column.Value.GroupBy(x => x)
+                                               .OrderByDescending(g => g.Count())
+                                               .FirstOrDefault()?.Key;
+
+                summaryBuilder.AppendLine($"Column '{column.Key}' - Most frequent value: '{mostFrequent}'.");
+            }
+
+            // Analiza las columnas de fechas
+            foreach (var column in dateColumns)
+            {
+                DateTime minDate = column.Value.Min();
+                DateTime maxDate = column.Value.Max();
+
+                summaryBuilder.AppendLine($"Column '{column.Key}' - Date range: From {minDate.ToShortDateString()} to {maxDate.ToShortDateString()}.");
+            }
+        }
+        else
+        {
+            summaryBuilder.AppendLine("No records were returned by the query.");
+        }
+
+        return summaryBuilder.ToString();
     }
 }

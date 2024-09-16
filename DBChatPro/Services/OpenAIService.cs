@@ -18,7 +18,7 @@ namespace DBChatPro.Services
             //string openAIDeploymentName = "your-model-deployment-name";
 
             // Crear el cliente de OpenAI con la clave
-            var api = new OpenAIClient("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");
+            var api = new OpenAIClient("your-openai-key");
 
             // Crear el cliente de chat de OpenAI
             var chatClient = api.GetChatClient("gpt-4o-mini");
@@ -38,9 +38,9 @@ namespace DBChatPro.Services
             builder.AppendLine(@"{ ""summary"": ""your-summary"", ""query"":  ""your-query"" }");
             builder.AppendLine("Output ONLY JSON formatted on a single line. Do not use new line characters.");
             builder.AppendLine(@"In the preceding JSON response, substitute ""your-query"" with Microsoft SQL Server Query to retrieve the requested data.");
-            builder.AppendLine(@"In the preceding JSON response, substitute ""your-summary"" with an explanation of each step you took to create this query in a detailed paragraph.");
+            builder.AppendLine(@"In the preceding JSON response, substitute ""your-summary"" with a detailed analysis of the key insights in Spanish. The summary should include specific metrics such as totals, averages, the most frequent or highest values, and any other relevant patterns or trends regardless of the data type. Be specific and provide numerical values where applicable. For example, 'El artículo más vendido fue X con un total de Y ventas, representando Z% del total de ventas.'");
             builder.AppendLine("Do not use MySQL or PostgreSQL syntax.");
-            builder.AppendLine("Always include all of the table columns and details.");
+            //builder.AppendLine("Always include all of the table columns and details.");
             
             // builder.AppendLine("Always limit the SQL Query to 100 rows.");
 

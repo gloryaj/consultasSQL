@@ -273,14 +273,10 @@
             var aiResponse = await OpenAIService.GetAISQLQuery(Prompt, ActiveConnection);
 
             Query = aiResponse.query;
-            Summary = aiResponse.summary;
 
             LoadingMessage = "Running the Database query...";
-            RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);//rowdara es una lista de cadenas de texto
+            RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);
 
-            Summary = aiResponse.summary;
-
-            // Generar un resumen basado en los resultados obtenidos
             Summary = GenerateSummary(RowData);
 
             Loading = false;
@@ -297,6 +293,7 @@
         }
     }
 
+    // Generar un resumen basado en los resultados obtenidos, rowdata es una cadena de texto
     public string GenerateSummary(List<List<string>> rowData)
     {
         StringBuilder summaryBuilder = new StringBuilder();
@@ -373,4 +370,67 @@
 
         return summaryBuilder.ToString();
     }
+
+    // public string GenerateSummary(List<List<string>> rowData)
+    // {
+    //     StringBuilder summaryBuilder = new StringBuilder();
+
+    //     // Verifica si hay datos
+    //     if (rowData == null || rowData.Count == 0)
+    //     {
+    //         return "No se proporcionaron datos.";
+    //     }
+
+    //     // La primera fila contiene los nombres de las columnas
+    //     List<string> columnNames = rowData[0];
+    //     int rowCount = rowData.Count - 1; // Excluye los nombres de las columnas
+    //     summaryBuilder.AppendLine($"La consulta devolvió {rowCount} registros.{Environment.NewLine}");
+    //     summaryBuilder.AppendLine();
+
+    //     if (rowCount > 0)
+    //     {
+    //         // Calcular el ancho máximo de cada columna
+    //         int[] maxColumnWidths = new int[columnNames.Count];
+    //         for (int i = 0; i < columnNames.Count; i++)
+    //         {
+    //             maxColumnWidths[i] = columnNames[i].Length;
+    //         }
+
+    //         for (int i = 1; i < rowData.Count; i++)
+    //         {
+    //             for (int j = 0; j < rowData[i].Count; j++)
+    //             {
+    //                 if (rowData[i][j].Length > maxColumnWidths[j])
+    //                 {
+    //                     maxColumnWidths[j] = rowData[i][j].Length;
+    //                 }
+    //             }
+    //         }
+
+    //         // Agrega los nombres de las columnas
+    //         for (int i = 0; i < columnNames.Count; i++)
+    //         {
+    //             summaryBuilder.Append(columnNames[i].PadRight(maxColumnWidths[i] + 2));
+    //         }
+    //         summaryBuilder.AppendLine();
+    //         summaryBuilder.AppendLine(new string('-', maxColumnWidths.Sum() + (2 * columnNames.Count)));
+
+    //         // Agrega los datos de cada fila
+    //         for (int i = 1; i < rowData.Count; i++)
+    //         {
+    //             for (int j = 0; j < rowData[i].Count; j++)
+    //             {
+    //                 summaryBuilder.Append(rowData[i][j].PadRight(maxColumnWidths[j] + 2));
+    //             }
+    //             summaryBuilder.AppendLine();
+    //         }
+    //     }
+    //     else
+    //     {
+    //         summaryBuilder.AppendLine("La consulta no devolvió registros.");
+    //     }
+
+    //     return summaryBuilder.ToString();
+    // }
+
 }

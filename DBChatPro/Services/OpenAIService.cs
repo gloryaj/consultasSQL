@@ -1,6 +1,4 @@
-﻿//using Azure.AI.OpenAI;
-//using Azure;
-using static MudBlazor.CategoryTypes;
+﻿using static MudBlazor.CategoryTypes;
 using System.Text.Json;
 using System.Text;
 using OpenAI.Chat;
@@ -34,10 +32,8 @@ namespace DBChatPro.Services
             builder.AppendLine(@"{ ""summary"": ""your-summary"", ""query"":  ""your-query"" }");
             builder.AppendLine("Output ONLY JSON formatted on a single line. Do not use new line characters.");
             builder.AppendLine(@"In the preceding JSON response, substitute ""your-query"" with Microsoft SQL Server Query to retrieve the requested data.");
-            builder.AppendLine(@"In the preceding JSON response, substitute ""your-summary"" with an analysis of the query results in Spanish. The summary should include key insights, such as totals, averages, the most frequent or highest values, and any other relevant patterns or trends regardless of the data type.");
             builder.AppendLine("Do not use MySQL or PostgreSQL syntax.");
-            //builder.AppendLine("Always include all of the table columns and details.");
-            
+            builder.AppendLine("Include only the most important and relevant table columns and details.");
 
             // Build the AI chat/prompts
             chatHistory.Add(new SystemChatMessage(builder.ToString()));

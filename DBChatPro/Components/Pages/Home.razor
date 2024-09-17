@@ -273,13 +273,15 @@
             var aiResponse = await OpenAIService.GetAISQLQuery(Prompt, ActiveConnection);
 
             Query = aiResponse.query;
-            Summary = aiResponse.summary; 
+            Summary = aiResponse.summary;
 
             LoadingMessage = "Running the Database query...";
             RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);//rowdara es una lista de cadenas de texto
 
+            Summary = aiResponse.summary;
+
             // Generar un resumen basado en los resultados obtenidos
-            //Summary = GenerateSummary(RowData);
+            Summary = GenerateSummary(RowData);
 
             Loading = false;
             HistoryService.SaveQuery(Prompt, ActiveConnection.Name);
@@ -295,7 +297,6 @@
         }
     }
 
-    //no se esta utulizando
     public string GenerateSummary(List<List<string>> rowData)
     {
         StringBuilder summaryBuilder = new StringBuilder();
@@ -303,7 +304,7 @@
         // Verifica si hay datos
         if (rowData == null || rowData.Count == 0)
         {
-            return "No data was provided.";
+            return "No se proporcionaron datos.";
         }
 
         // La primera fila contiene los nombres de las columnas
@@ -314,86 +315,60 @@
         if (rowCount > 0)
         {
             // Inicializa estructuras para analizar los datos
-            var numericColumns = new Dictionary<string, List<decimal>>();
-            var stringColumns = new Dictionary<string, List<string>>();
-            var dateColumns = new Dictionary<string, List<DateTime>>();
+            var columnData = new Dictionary<string, List<string>>();
 
             // Recorre cada columna
             for (int i = 0; i < columnNames.Count; i++)
             {
                 var currentColumn = columnNames[i];
-                var numericValues = new List<decimal>();
-                var stringValues = new List<string>();
-                var dateValues = new List<DateTime>();
+                var values = new List<string>();
 
                 // Recorre cada fila (excluyendo la primera fila de encabezados)
                 for (int j = 1; j < rowData.Count; j++)
                 {
-                    var value = rowData[j][i];
-
-                    // Intenta determinar el tipo de dato de la columna
-                    if (decimal.TryParse(value, out decimal numericResult))
-                    {
-                        numericValues.Add(numericResult);
-                    }
-                    else if (DateTime.TryParse(value, out DateTime dateResult))
-                    {
-                        dateValues.Add(dateResult);
-                    }
-                    else
-                    {
-                        stringValues.Add(value);
-                    }
+                    values.Add(rowData[j][i]);
                 }
 
-                // Clasifica las columnas según el tipo de dato detectado
-                if (numericValues.Count > 0)
+                columnData[currentColumn] = values;
+            }
+
+            // Analiza cada columna
+            foreach (var column in columnData)
+            {
+                var values = column.Value;
+                var distinctValues = values.Distinct().ToList();
+                summaryBuilder.AppendLine($"Columna '{column.Key}':");
+                summaryBuilder.AppendLine($"- Total de valores: {values.Count}");
+                summaryBuilder.AppendLine($"- Valores únicos: {distinctValues.Count}");
+
+                // Si la columna tiene valores numéricos, calcula estadísticas
+                if (values.All(v => decimal.TryParse(v, out _)))
                 {
-                    numericColumns[currentColumn] = numericValues;
+                    var numericValues = values.Select(decimal.Parse).ToList();
+                    summaryBuilder.AppendLine($"- Suma: {numericValues.Sum()}");
+                    summaryBuilder.AppendLine($"- Promedio: {numericValues.Average()}");
+                    summaryBuilder.AppendLine($"- Máximo: {numericValues.Max()}");
+                    summaryBuilder.AppendLine($"- Mínimo: {numericValues.Min()}");
                 }
-                else if (dateValues.Count > 0)
+                // Si la columna tiene valores de fecha, calcula el rango de fechas
+                else if (values.All(v => DateTime.TryParse(v, out _)))
                 {
-                    dateColumns[currentColumn] = dateValues;
+                    var dateValues = values.Select(DateTime.Parse).ToList();
+                    summaryBuilder.AppendLine($"- Rango de fechas: Desde {dateValues.Min():d} hasta {dateValues.Max():d}");
                 }
+                // Si la columna tiene valores de texto, encuentra el valor más frecuente
                 else
                 {
-                    stringColumns[currentColumn] = stringValues;
+                    var mostFrequent = values.GroupBy(v => v)
+                                             .OrderByDescending(g => g.Count())
+                                             .FirstOrDefault()?.Key;
+                    summaryBuilder.AppendLine($"- Valor más frecuente: '{mostFrequent}'");
                 }
-            }
-
-            // Analiza las columnas numéricas
-            foreach (var column in numericColumns)
-            {
-                decimal total = column.Value.Sum();
-                decimal average = column.Value.Average();
-                decimal max = column.Value.Max();
-                decimal min = column.Value.Min();
-
-                summaryBuilder.AppendLine($"Column '{column.Key}' - Total: {total}, Average: {average}, Max: {max}, Min: {min}.");
-            }
-
-            // Analiza las columnas de texto
-            foreach (var column in stringColumns)
-            {
-                var mostFrequent = column.Value.GroupBy(x => x)
-                                               .OrderByDescending(g => g.Count())
-                                               .FirstOrDefault()?.Key;
-
-                summaryBuilder.AppendLine($"Column '{column.Key}' - Most frequent value: '{mostFrequent}'.");
-            }
-
-            // Analiza las columnas de fechas
-            foreach (var column in dateColumns)
-            {
-                DateTime minDate = column.Value.Min();
-                DateTime maxDate = column.Value.Max();
-
-                summaryBuilder.AppendLine($"Column '{column.Key}' - Date range: From {minDate.ToShortDateString()} to {maxDate.ToShortDateString()}.");
             }
         }
         else
         {
-            summaryBuilder.AppendLine("No records were returned by the query.");
+            summaryBuilder.AppendLine("La consulta no devolvió registros.");
         }
 
         return summaryBuilder.ToString();

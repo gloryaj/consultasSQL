@@ -1,5 +1,6 @@
 using DBChatPro.Client.Pages;
 using DBChatPro.Components;
+using DBChatPro.Services;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -23,6 +24,7 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
 
+builder.Services.AddSingleton<OpenAIService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

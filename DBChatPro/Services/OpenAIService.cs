@@ -8,11 +8,26 @@ namespace DBChatPro.Services
 {
     public class OpenAIService
     {
-        public static async Task<AIQuery> GetAISQLQuery(string userPrompt, AIConnection aiConnection)
+        private readonly IConfiguration _configuration;
+
+        public OpenAIService(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+        public async Task<AIQuery> GetAISQLQuery(string userPrompt, AIConnection aiConnection)
         {
 
-            // Crear el cliente de OpenAI con la clave
-            var api = new OpenAIClient("your-openai-key");
+            // Obtener la clave de OpenAI del archivo de configuración
+            var apiKey = _configuration["OpenAI:ApiKey"];
+
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                throw new Exception("OpenAI API Key not found in configuration.");
+            }
+
+            // Crear el cliente de OpenAI con la clave desde appsettings.json
+            var api = new OpenAIClient(apiKey);
+
 
             // Crear el cliente de chat de OpenAI
             var chatClient = api.GetChatClient("gpt-4o-mini");

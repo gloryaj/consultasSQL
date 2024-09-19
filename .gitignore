@@ -397,5 +397,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 DBChatPro/AIConnections.txt
-DBChatPro/Services/OpenAIService.cs
 DBChatPro/appsettings.json

@@ -398,3 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 DBChatPro/AIConnections.txt
 DBChatPro/appsettings.json
+/DBChatPro/appsettings.json

@@ -4,7 +4,16 @@ using DBChatPro.Services;
 using MudBlazor;
 using MudBlazor.Services;
 
+using Microsoft.Extensions.Logging;
+using DBChatPro;
+
+
 var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Services.AddSingleton<OpenAIService>();
+builder.Services.AddSingleton<DatabaseService>(); // Si aún no lo has hecho
+builder.Services.AddLogging(); // Asegúrate de que el logging esté configurado
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

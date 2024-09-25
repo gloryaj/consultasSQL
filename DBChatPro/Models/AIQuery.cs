@@ -1,8 +1,14 @@
-﻿namespace DBChatPro
+﻿using System.Text.Json.Serialization;
+
+namespace DBChatPro.Services
 {
     public class AIQuery
     {
-        public string summary { get; set; }
-        public string query { get; set; }
+        [JsonPropertyName("summary")]
+        public string Summary { get; set; }
+
+        [JsonPropertyName("query")]
+        public string Query { get; set; }
     }
 }
+

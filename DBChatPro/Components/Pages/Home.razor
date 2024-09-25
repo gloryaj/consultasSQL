@@ -5,9 +5,14 @@
 @using System.Text
 @using DBChatPro.Models
 @using System.Data
+@using DBChatPro.Services
 @inject ISnackbar Snackbar
 @inject OpenAIService OpenAIService
+@inject DatabaseService DatabaseService
+@inject HistoryService HistoryService
+
 <PageTitle>Home</PageTitle>
+
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Fixed="false">
     <MudGrid Class="my-2">
         @if (Connections.Count == 0)
@@ -18,7 +23,7 @@
         }
         else
         {
-            // Main data query area
+            <!-- Main data query area -->
             <MudItem xs="12">
                 <h1>
                     Chat with your database
@@ -38,26 +43,32 @@
                                 }
                             </MudMenu>
                         </p>
-                        <EditForm Class="mb-6" Model="FmModel" OnSubmit="() => OnSubmit()">
+                        <!-- Formulario para el prompt del usuario -->
+                        <EditForm Class="mb-6" Model="FmModel" OnValidSubmit="OnValidSubmit">
+                            <DataAnnotationsValidator />
                             <div>
-                                <MudTextField @bind-Value="FmModel.Prompt" T="string" Label="Your prompt" Variant="Variant.Text" Lines="5" />
+                                <MudTextField @bind-Value="FmModel.Prompt" T="string" Label="Your prompt" Variant="Variant.Text" Lines="5" Required="true" />
                             </div>
                             <div>
-                                <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary">Submit</MudButton>
+                                <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary" Disabled="@Loading">Submit</MudButton>
                             </div>
                         </EditForm>
+                        <!-- Indicador de carga -->
                         @if (Loading)
                         {
                             <p Class="my-6">@LoadingMessage <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" /></p>
                         }
+                        <!-- Mensajes de error -->
                         @if (!string.IsNullOrEmpty(Error))
                         {
-                            <p Class="my-6"><b>Error:</b> @Error</p>
+                            <MudAlert Class="my-6" Severity="Severity.Error">Error: @Error</MudAlert>
                         }
                     </MudItem>
                     <MudItem xs="4">
+                        <!-- Espacio reservado para futuras funcionalidades -->
                     </MudItem>
                 </MudGrid>
+                <!-- Pestañas para Resultados, SQL Editor y Summary -->
                 <MudTabs KeepPanelsAlive="true" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
                     <MudTabPanel Text="Results">
                         @if (RowData.Count > 0)
@@ -108,7 +119,7 @@
                 </MudTabs>
             </MudItem>
 
-            // Right column tabs
+            <!-- Right column tabs -->
             <MudItem xs="4">
                 <MudDrawer Open="@open" Anchor="Anchor.Right" ClipMode="DrawerClipMode.Always" Elevation="1" Breakpoint="Breakpoint.SmAndUp" Width="25%" Variant="@DrawerVariant.Persistent">
                     <MudTabs KeepPanelsAlive="true" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
@@ -131,7 +142,6 @@
                             {
                                 <p class="mb-6">Query history for <b>@ActiveConnection.Name</b></p>
                                 <MudPaper>
-
                                     @foreach (var item in History)
                                     {
                                         <MudList Clickable="true">
@@ -139,7 +149,6 @@
                                         </MudList>
                                     }
                                 </MudPaper>
-
                             }
                             else
                             {
@@ -151,7 +160,6 @@
                             {
                                 <p class="mb-6">Your saved queries for <b>@ActiveConnection.Name</b></p>
                                 <MudPaper>
-
                                     @foreach (var item in Favorites)
                                     {
                                         <MudList Clickable="true">
@@ -159,7 +167,6 @@
                                         </MudList>
                                     }
                                 </MudPaper>
-
                             }
                             else
                             {
@@ -172,6 +179,7 @@
         }
     </MudGrid>
 </MudContainer>
+
 @code {
     // Table styling
     private bool dense = false;
@@ -210,27 +218,34 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Connections = DatabaseService.GetAIConnections();
-        if (Connections.Count > 0)
+        try
         {
-            ActiveConnection = Connections.FirstOrDefault();
+            Connections = DatabaseService.GetAIConnections();
+            if (Connections.Count > 0)
+            {
+                ActiveConnection = Connections.FirstOrDefault();
+            }
+            else
+            {
+                ActiveConnection = new AIConnection() { SchemaRaw = new List<string>(), SchemaStructured = new List<TableSchema>() };
+            }
+            History = HistoryService.GetQueries(ActiveConnection.Name);
+            Favorites = HistoryService.GetFavorites(ActiveConnection.Name);
         }
-        else
+        catch (Exception e)
         {
-            ActiveConnection = new AIConnection() { SchemaRaw = new List<string>(), SchemaStructured = new List<TableSchema>() };
+            Error = e.Message;
         }
-        History = HistoryService.GetQueries(ActiveConnection.Name);
-        Favorites = HistoryService.GetFavorites(ActiveConnection.Name);
     }
 
-    private void SaveFavorite()
+    private async Task SaveFavorite()
     {
         HistoryService.SaveFavorite(FmModel.Prompt, ActiveConnection.Name);
         Favorites = HistoryService.GetFavorites(ActiveConnection.Name);
         Snackbar.Add("Saved favorite!", Severity.Success);
     }
 
-    private void EditQuery()
+    private async Task EditQuery()
     {
         RowData = DatabaseService.GetDataTable(ActiveConnection, Query);
         Snackbar.Add("Results updated.", Severity.Success);
@@ -265,26 +280,46 @@
         await RunDataChat(FmModel.Prompt);
     }
 
-    public async Task RunDataChat(string Prompt)
+    // Método actualizado para generar y validar la consulta SQL
+    public async Task RunDataChat(string userPrompt)
     {
         try
         {
             Loading = true;
-            LoadingMessage = "Getting the AI query...";
-            var aiResponse = await OpenAIService.GetAISQLQuery(Prompt, ActiveConnection);
+            LoadingMessage = "Generating SQL query...";
+            Error = String.Empty;
 
-            Query = aiResponse.query;
+            // Generar la consulta SQL utilizando OpenAIService
+            var aiResponse = await OpenAIService.GetAISQLQuery(userPrompt, ActiveConnection);
 
-            LoadingMessage = "Running the Database query...";
-            RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);
+            Query = aiResponse.Query; // Asegúrate de que la propiedad es 'Query' con 'Q' mayúscula
+
+            LoadingMessage = "Validating SQL query...";
+            // Validar la consulta SQL generada
+            var validationResult = await OpenAIService.ValidateSQLQuery(Query);
+
+            if (!validationResult.IsValid)
+            {
+                // Si la validación falla, mostrar el feedback de error y detener el proceso
+                Error = validationResult.Feedback;
+                Loading = false;
+                return;
+            }
+
+            // Si la validación es exitosa, proceder a ejecutar la consulta
+            LoadingMessage = "Executing SQL query...";
+            RowData = DatabaseService.GetDataTable(ActiveConnection, Query);
 
             Summary = GenerateSummary(RowData);
 
-            Loading = false;
-            HistoryService.SaveQuery(Prompt, ActiveConnection.Name);
+            // Guardar la consulta en el historial
+            HistoryService.SaveQuery(userPrompt, ActiveConnection.Name);
             History = HistoryService.GetQueries(ActiveConnection.Name);
             Favorites = HistoryService.GetFavorites(ActiveConnection.Name);
-            Error = string.Empty;
+
+            Loading = false;
+            Error = String.Empty;
+            Snackbar.Add("Query executed successfully.", Severity.Success);
         }
         catch (Exception e)
         {
@@ -294,7 +329,7 @@
         }
     }
 
-    // Generar un resumen basado en los resultados obtenidos, rowdata es una cadena de texto
+    // Generar un resumen basado en los resultados obtenidos
     public string GenerateSummary(List<List<string>> rowData)
     {
         StringBuilder summaryBuilder = new StringBuilder();
@@ -372,66 +407,9 @@
         return summaryBuilder.ToString();
     }
 
-    // public string GenerateSummary(List<List<string>> rowData)
-    // {
-    //     StringBuilder summaryBuilder = new StringBuilder();
-
-    //     // Verifica si hay datos
-    //     if (rowData == null || rowData.Count == 0)
-    //     {
-    //         return "No se proporcionaron datos.";
-    //     }
-
-    //     // La primera fila contiene los nombres de las columnas
-    //     List<string> columnNames = rowData[0];
-    //     int rowCount = rowData.Count - 1; // Excluye los nombres de las columnas
-    //     summaryBuilder.AppendLine($"La consulta devolvió {rowCount} registros.{Environment.NewLine}");
-    //     summaryBuilder.AppendLine();
-
-    //     if (rowCount > 0)
-    //     {
-    //         // Calcular el ancho máximo de cada columna
-    //         int[] maxColumnWidths = new int[columnNames.Count];
-    //         for (int i = 0; i < columnNames.Count; i++)
-    //         {
-    //             maxColumnWidths[i] = columnNames[i].Length;
-    //         }
-
-    //         for (int i = 1; i < rowData.Count; i++)
-    //         {
-    //             for (int j = 0; j < rowData[i].Count; j++)
-    //             {
-    //                 if (rowData[i][j].Length > maxColumnWidths[j])
-    //                 {
-    //                     maxColumnWidths[j] = rowData[i][j].Length;
-    //                 }
-    //             }
-    //         }
-
-    //         // Agrega los nombres de las columnas
-    //         for (int i = 0; i < columnNames.Count; i++)
-    //         {
-    //             summaryBuilder.Append(columnNames[i].PadRight(maxColumnWidths[i] + 2));
-    //         }
-    //         summaryBuilder.AppendLine();
-    //         summaryBuilder.AppendLine(new string('-', maxColumnWidths.Sum() + (2 * columnNames.Count)));
-
-    //         // Agrega los datos de cada fila
-    //         for (int i = 1; i < rowData.Count; i++)
-    //         {
-    //             for (int j = 0; j < rowData[i].Count; j++)
-    //             {
-    //                 summaryBuilder.Append(rowData[i][j].PadRight(maxColumnWidths[j] + 2));
-    //             }
-    //             summaryBuilder.AppendLine();
-    //         }
-    //     }
-    //     else
-    //     {
-    //         summaryBuilder.AppendLine("La consulta no devolvió registros.");
-    //     }
-
-    //     return summaryBuilder.ToString();
-    // }
-
+    // Método para manejar el envío válido del formulario
+    private async Task OnValidSubmit(EditContext context)
+    {
+        await RunDataChat(FmModel.Prompt);
+    }
 }

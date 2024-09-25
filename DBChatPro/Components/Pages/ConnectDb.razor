@@ -175,6 +175,10 @@
                        OR o.Name LIKE 'BODEGA%' -- Filtrar tablas que empiecen con BODEGA
                        OR o.Name LIKE 'EXISTENCIA%' -- Filtrar tablas que empiecen con EXISTENCIA
                        OR o.Name LIKE 'DOCUMENTO%') -- Filtrar tablas DOCUMENTOS_CP, DOCUMENTOS_CC y otros documentos
+                       OR o.Name LIKE 'ORDEN_COMPRA%') -- Filtrar tablas ORDEN_COMPRA, ORDEN_COMPRA_LINEA, ORDEN_COMPRA_IMP
+                       OR o.Name LIKE 'PAIS') -- Filtrar tablas PAIS
+                       OR o.Name LIKE 'CLIENTE%') -- Filtrar tablas CLIENTE, CLIENTE_RETENCION, CLIENTE_VENDEDOR
+                       OR o.Name LIKE 'COBRADOR') -- Filtrar tabla COBRADOR
                 ORDER BY o.Name";
 
 

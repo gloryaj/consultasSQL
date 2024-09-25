@@ -156,12 +156,6 @@
         {
             connection.Open();
 
-            // string sql = @"SELECT SCHEMA_NAME(schema_id) + '.' + o.Name AS 'TableName', c.Name as 'ColumName'
-            //     FROM     sys.columns c
-            //              JOIN sys.objects o ON o.object_id = c.object_id
-            //     WHERE    o.type = 'U'
-            //     ORDER BY o.Name";
-
             string sql = @"SELECT SCHEMA_NAME(o.schema_id) + '.' + o.Name AS 'TableName', c.Name AS 'ColumName'
                 FROM sys.columns c
                 JOIN sys.objects o ON o.object_id = c.object_id

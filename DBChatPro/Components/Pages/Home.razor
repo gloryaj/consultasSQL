@@ -105,6 +105,12 @@
                             <p Class="my-6">@Summary</p>
                         }
                     </MudTabPanel>
+                    <MudTabPanel Text="Analysis Summary">
+                        @if (!string.IsNullOrEmpty(AnalysisSummary))
+                        {
+                            <p Class="my-6">@AnalysisSummary</p>
+                        }
+                    </MudTabPanel>
                 </MudTabs>
             </MudItem>
 
@@ -196,6 +202,9 @@
     // Prompt & completion data
     private string Prompt = String.Empty;
     private string Summary = String.Empty;
+    private string AnalysisSummary = String.Empty;  
+    private string KeyTrends = String.Empty;
+    private string Recommendations = String.Empty;
     private string Query = String.Empty;
     private string Error = String.Empty;
 
@@ -271,14 +280,37 @@
         {
             Loading = true;
             LoadingMessage = "Getting the AI query...";
-            var aiResponse = await OpenAIService.GetAISQLQuery(Prompt, ActiveConnection);
 
+            var aiResponse = await OpenAIService.GetAISQLQueryWithAnalysis(Prompt, ActiveConnection);
+
+            if (aiResponse == null || string.IsNullOrEmpty(aiResponse.query) || string.IsNullOrEmpty(aiResponse.summary))
+            {
+                throw new Exception("Failed to get a valid SQL query from the AI.");
+            }
             Query = aiResponse.query;
 
             LoadingMessage = "Running the Database query...";
             RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);
-
             Summary = GenerateSummary(RowData);
+
+            // Convertir los resultados de la consulta a un formato adecuado para el análisis
+            var queryResult = ConvertRowDataToString(RowData);
+
+            //Solicitar a la IA un análisis basado en los resultados obtenidos
+            LoadingMessage = "Analyzing the data...";
+            var aiAnalysisResponse = await OpenAIService.GetAISQLQueryWithAnalysis(Prompt, ActiveConnection, queryResult);
+
+            if (aiAnalysisResponse == null || string.IsNullOrEmpty(aiAnalysisResponse.AnalysisSummary))
+            {
+                throw new Exception("Failed to get a valid analysis from the AI.");
+            }
+
+            AnalysisSummary = aiAnalysisResponse.AnalysisSummary +
+                  ". \n" +
+                  string.Join(" \n Tendencias clave: ", aiAnalysisResponse.KeyTrends) +
+                  ". \n Recomendaciones: \n" +
+                  string.Join(". \n", aiAnalysisResponse.Recommendations);
+
 
             Loading = false;
             HistoryService.SaveQuery(Prompt, ActiveConnection.Name);
@@ -292,6 +324,21 @@
             Loading = false;
             LoadingMessage = String.Empty;
         }
+    }
+
+    private string ConvertRowDataToString(List<List<string>> rowData)
+    {
+        var stringBuilder = new StringBuilder();
+
+        // Recorremos cada fila en RowData
+        foreach (var row in rowData)
+        {
+            // Unimos los valores de la fila, separados por comas o cualquier delimitador
+            stringBuilder.AppendLine(string.Join(", ", row));
+        }
+
+        // Devolvemos la cadena construida a partir de los datos
+        return stringBuilder.ToString();
     }
 
     // Generar un resumen basado en los resultados obtenidos, rowdata es una cadena de texto
@@ -371,67 +418,4 @@
 
         return summaryBuilder.ToString();
     }
-
-    // public string GenerateSummary(List<List<string>> rowData)
-    // {
-    //     StringBuilder summaryBuilder = new StringBuilder();
-
-    //     // Verifica si hay datos
-    //     if (rowData == null || rowData.Count == 0)
-    //     {
-    //         return "No se proporcionaron datos.";
-    //     }
-
-    //     // La primera fila contiene los nombres de las columnas
-    //     List<string> columnNames = rowData[0];
-    //     int rowCount = rowData.Count - 1; // Excluye los nombres de las columnas
-    //     summaryBuilder.AppendLine($"La consulta devolvió {rowCount} registros.{Environment.NewLine}");
-    //     summaryBuilder.AppendLine();
-
-    //     if (rowCount > 0)
-    //     {
-    //         // Calcular el ancho máximo de cada columna
-    //         int[] maxColumnWidths = new int[columnNames.Count];
-    //         for (int i = 0; i < columnNames.Count; i++)
-    //         {
-    //             maxColumnWidths[i] = columnNames[i].Length;
-    //         }
-
-    //         for (int i = 1; i < rowData.Count; i++)
-    //         {
-    //             for (int j = 0; j < rowData[i].Count; j++)
-    //             {
-    //                 if (rowData[i][j].Length > maxColumnWidths[j])
-    //                 {
-    //                     maxColumnWidths[j] = rowData[i][j].Length;
-    //                 }
-    //             }
-    //         }
-
-    //         // Agrega los nombres de las columnas
-    //         for (int i = 0; i < columnNames.Count; i++)
-    //         {
-    //             summaryBuilder.Append(columnNames[i].PadRight(maxColumnWidths[i] + 2));
-    //         }
-    //         summaryBuilder.AppendLine();
-    //         summaryBuilder.AppendLine(new string('-', maxColumnWidths.Sum() + (2 * columnNames.Count)));
-
-    //         // Agrega los datos de cada fila
-    //         for (int i = 1; i < rowData.Count; i++)
-    //         {
-    //             for (int j = 0; j < rowData[i].Count; j++)
-    //             {
-    //                 summaryBuilder.Append(rowData[i][j].PadRight(maxColumnWidths[j] + 2));
-    //             }
-    //             summaryBuilder.AppendLine();
-    //         }
-    //     }
-    //     else
-    //     {
-    //         summaryBuilder.AppendLine("La consulta no devolvió registros.");
-    //     }
-
-    //     return summaryBuilder.ToString();
-    // }
-
 }

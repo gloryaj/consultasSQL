@@ -43,7 +43,7 @@
                                 <MudTextField @bind-Value="FmModel.Prompt" T="string" Label="Consulta a base de datos" Variant="Variant.Text" Lines="5" />
                             </div>
                             <div>
-                                <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary">Submit</MudButton>
+                                <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary">Consultar</MudButton>
                             </div>
                         </EditForm>
                         @if (Loading)
@@ -79,7 +79,7 @@
                     </MudItem>
                 </MudGrid>
                 <MudTabs KeepPanelsAlive="true" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
-                    <MudTabPanel Text="Results">
+                    <MudTabPanel Text="Resultados">
                         @if (RowData.Count > 0)
                         {
                             <MudTable SortLabel="Sort By" Items="@RowData.Skip(1)" Dense="@dense" Bordered="@bordered" Striped="@striped">
@@ -111,7 +111,7 @@
                             <p>No data to show.</p>
                         }
                     </MudTabPanel>
-                    <MudTabPanel Text="SQL Editor">
+                    <MudTabPanel Text="Editor SQL">
                         <div>
                             <MudTextField @bind-Value="@Query" Text="@Query" T="string" Label="Edit generated query" Variant="Variant.Text" Lines="5" />
                         </div>
@@ -119,13 +119,13 @@
                             <MudButton @onclick="EditQuery" Class="my-6" Variant="Variant.Filled" Color="Color.Primary">Execute</MudButton>
                         </div>
                     </MudTabPanel>
-                    <MudTabPanel Text="Summary">
+                    <MudTabPanel Text="Resumen">
                         @if (!string.IsNullOrEmpty(Summary))
                         {
                             <p Class="my-6">@Summary</p>
                         }
                     </MudTabPanel>
-                    <MudTabPanel Text="Analysis Summary">
+                    <MudTabPanel Text="Analisis de los datos">
                         @if (!string.IsNullOrEmpty(AnalysisSummary))
                         {
                             <p Class="my-6">@AnalysisSummary</p>

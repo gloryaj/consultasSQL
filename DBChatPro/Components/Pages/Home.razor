@@ -40,7 +40,7 @@
                         </p>
                         <EditForm Class="mb-6" Model="FmModel" OnSubmit="() => OnSubmit()">
                             <div>
-                                <MudTextField @bind-Value="FmModel.Prompt" T="string" Label="Your prompt" Variant="Variant.Text" Lines="5" />
+                                <MudTextField @bind-Value="FmModel.Prompt" T="string" Label="Consulta a base de datos" Variant="Variant.Text" Lines="5" />
                             </div>
                             <div>
                                 <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary">Submit</MudButton>
@@ -54,6 +54,26 @@
                         {
                             <p Class="my-6"><b>Error:</b> @Error</p>
                         }
+
+                        <EditForm Class="mb-6" Model="FmModel" OnSubmit="() => OnSubmitAnalysis()">
+                            <div>
+                                <MudTextField @bind-Value="FmModel.AnalysisPrompt" T="string" Label="Consulta para análisis" Variant="Variant.Text" Lines="5" />
+                            </div>
+                            <div>
+                                <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary">Realizar Análisis</MudButton>
+                            </div>
+                        </EditForm>
+
+                        @if (LoadingAnalysis)
+                        {
+                            <p class="my-6">@LoadingMessageAnalysis <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" /></p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(ErrorAnalysis))
+                        {
+                            <p class="my-6"><b>Error:</b> @ErrorAnalysis</p>
+                        }
+                        
                     </MudItem>
                     <MudItem xs="4">
                     </MudItem>
@@ -193,6 +213,11 @@
     private string LoadingMessage = String.Empty;
     public AIConnection ActiveConnection { get; set; } = new();
 
+    //para analisis
+    public bool LoadingAnalysis { get; set; } = false;
+    public string LoadingMessageAnalysis { get; set; } = string.Empty;
+    public string ErrorAnalysis { get; set; } = string.Empty;
+
     // Data lists
     public List<HistoryItem> History { get; set; } = new();
     public List<HistoryItem> Favorites { get; set; } = new();
@@ -259,6 +284,7 @@
         Summary = String.Empty;
         Query = String.Empty;
         Error = String.Empty;
+        AnalysisSummary = String.Empty;
         RowData = new List<List<string>>();
         FmModel = new FormModel();
     }
@@ -274,6 +300,11 @@
         await RunDataChat(FmModel.Prompt);
     }
 
+    public async Task OnSubmitAnalysis()
+    {
+        await AnalyzeDataChat(FmModel.AnalysisPrompt);
+    }
+
     public async Task RunDataChat(string Prompt)
     {
         try
@@ -281,7 +312,7 @@
             Loading = true;
             LoadingMessage = "Getting the AI query...";
 
-            var aiResponse = await OpenAIService.GetAISQLQueryWithAnalysis(Prompt, ActiveConnection);
+            var aiResponse = await OpenAIService.GetAISQLQuery(Prompt, ActiveConnection);
 
             if (aiResponse == null || string.IsNullOrEmpty(aiResponse.query) || string.IsNullOrEmpty(aiResponse.summary))
             {
@@ -292,25 +323,6 @@
             LoadingMessage = "Running the Database query...";
             RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);
             Summary = GenerateSummary(RowData);
-
-            // Convertir los resultados de la consulta a un formato adecuado para el análisis
-            var queryResult = ConvertRowDataToString(RowData);
-
-            //Solicitar a la IA un análisis basado en los resultados obtenidos
-            LoadingMessage = "Analyzing the data...";
-            var aiAnalysisResponse = await OpenAIService.GetAISQLQueryWithAnalysis(Prompt, ActiveConnection, queryResult);
-
-            if (aiAnalysisResponse == null || string.IsNullOrEmpty(aiAnalysisResponse.AnalysisSummary))
-            {
-                throw new Exception("Failed to get a valid analysis from the AI.");
-            }
-
-            AnalysisSummary = aiAnalysisResponse.AnalysisSummary +
-                  ". \n" +
-                  string.Join(" \n Tendencias clave: ", aiAnalysisResponse.KeyTrends) +
-                  ". \n Recomendaciones: \n" +
-                  string.Join(". \n", aiAnalysisResponse.Recommendations);
-
 
             Loading = false;
             HistoryService.SaveQuery(Prompt, ActiveConnection.Name);
@@ -323,6 +335,41 @@
             Error = e.Message;
             Loading = false;
             LoadingMessage = String.Empty;
+        }
+    }
+
+    public async Task AnalyzeDataChat(string Prompt)
+    {
+        try
+        {
+            LoadingAnalysis = true;
+            LoadingMessageAnalysis = "Analyzing the data...";
+
+            // Convertir los resultados de la consulta a un formato adecuado para el análisis
+            var queryResult = ConvertRowDataToString(RowData);
+
+            Console.WriteLine("Query Result: " + queryResult);
+            Console.WriteLine("Prompt " + Prompt);
+            // Solicitar a la IA un análisis basado en los resultados obtenidos
+            var aiAnalysisResponse = await OpenAIService.AnalyzeQueryResults(Prompt, queryResult);
+
+            if (aiAnalysisResponse == null || string.IsNullOrEmpty(aiAnalysisResponse.AnalysisSummary))
+            {
+                throw new Exception("Failed to get a valid analysis from the AI.");
+            }
+
+            AnalysisSummary = aiAnalysisResponse.AnalysisSummary;
+
+            Console.WriteLine("Analisis " + aiAnalysisResponse.AnalysisSummary);
+
+            LoadingAnalysis = false;
+            Error = string.Empty;
+        }
+        catch (Exception e)
+        {
+            Error = e.Message;
+            LoadingAnalysis = false;
+            LoadingMessageAnalysis = String.Empty;
         }
     }
 

@@ -3,5 +3,7 @@
     public class FormModel
     {
         public string Prompt { get; set; } = String.Empty;
+
+        public string AnalysisPrompt { get; set; }
     }
 }

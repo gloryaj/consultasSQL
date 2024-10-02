@@ -170,8 +170,12 @@
                        OR o.Name LIKE 'EXISTENCIA%'
                        OR o.Name LIKE 'DOCUMENTO%'
                        OR o.Name LIKE 'ORDEN_COMPRA%' 
-                       OR o.Name LIKE 'PAIS' 
+                       OR o.Name =    'PAIS' 
                        OR o.Name LIKE 'CLIENTE%'
+                       OR o.Name LIKE 'EMBARQUE%'
+                       OR o.Name =    'MONEDA'
+                       OR o.Name =    'TRANSACCION_INV'
+                       OR o.Name =    'AUDIT_TRANS_INV'
                        OR o.Name LIKE 'COBRADOR')
                 ORDER BY o.Name";
 

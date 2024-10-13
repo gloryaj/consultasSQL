@@ -1,4 +1,4 @@
-﻿namespace DBChatPro
+﻿namespace DBChatPro.Models
 {
     public class AIQuery
     {

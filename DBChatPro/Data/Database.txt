@@ -1,0 +1,65 @@
+Database: DYPLAST
+
+Tables:
+1. **FACTURA**: Contains information about the invoice headers.
+2. **FACTURA_LINEA**: Contains details of the invoice lines.
+
+---
+
+### FACTURA Table:
+This table stores information about the invoice headers. The following columns should be used when creating SQL filters:
+
+- **TIPO_DOCUMENTO**: 
+  - F: Indicates that the document type is an invoice.
+  
+- **ESTA_DESPACHADO**: 
+  - Use this field to filter whether the invoice has been dispatched.
+
+- **ESTADO_REMISION**: 
+  - Use this field to filter by the remittance status of the invoice.
+
+- **EN_INVESTIGACION**: 
+  - Use this field to filter invoices under investigation.
+
+- **MONEDA_FACTURA**: 
+  - Join with the `MONEDA` table to obtain the currency details for the invoice.
+
+- **CLASE_DOCUMENTO**: 
+  - Use this field to filter by document class.
+
+- **ANULADA**: 
+  - N: The invoice is not canceled.
+  - S: The invoice is canceled.
+
+- **CARGADO_CG**: 
+  - N: The invoice has NOT been loaded into the General Accounting module.
+  - S: The invoice has been loaded into the General Accounting module.
+
+- **CARGADO_CXC**: 
+  - N: The invoice has NOT been loaded into the Accounts Receivable module.
+  - S: The invoice has been loaded into the Accounts Receivable module.
+
+- **COBRADA**: 
+  - S: The invoice HAS been collected.
+  - N: The invoice has NOT been collected.
+
+---
+
+### FACTURA_LINEA Table:
+This table contains details of each line in an invoice. The following columns should be used when creating SQL filters:
+
+- **TIPO_DOCUMENTO**: 
+  - F: Indicates that the document type is an invoice.
+
+- **ANULADA**: 
+  - N: The invoice line is not canceled.
+  - S: The invoice line is canceled.
+
+---
+
+Relationships:
+- Each invoice in the `FACTURA` table may have multiple corresponding lines in the `FACTURA_LINEA` table.
+- The `MONEDA` table can be joined to the `FACTURA` table using the `MONEDA_FACTURA` column to retrieve currency information.
+
+Additional Notes:
+- All queries related to invoices must consider both the `FACTURA` and `FACTURA_LINEA` tables to get complete invoice details.

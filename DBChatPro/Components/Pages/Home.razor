@@ -322,7 +322,7 @@
 
             LoadingMessage = "Running the Database query...";
             RowData = DatabaseService.GetDataTable(ActiveConnection, aiResponse.query);
-            Summary = GenerateSummary(RowData);
+  
 
             Loading = false;
             HistoryService.SaveQuery(Prompt, ActiveConnection.Name);
@@ -386,83 +386,5 @@
 
         // Devolvemos la cadena construida a partir de los datos
         return stringBuilder.ToString();
-    }
-
-    // Generar un resumen basado en los resultados obtenidos, rowdata es una cadena de texto
-    public string GenerateSummary(List<List<string>> rowData)
-    {
-        StringBuilder summaryBuilder = new StringBuilder();
-
-        // Verifica si hay datos
-        if (rowData == null || rowData.Count == 0)
-        {
-            return "No se proporcionaron datos.";
-        }
-
-        // La primera fila contiene los nombres de las columnas
-        List<string> columnNames = rowData[0];
-        int rowCount = rowData.Count - 1; // Excluye los nombres de las columnas
-        summaryBuilder.AppendLine($"La consulta devolvió {rowCount} registros.");
-
-        if (rowCount > 0)
-        {
-            // Inicializa estructuras para analizar los datos
-            var columnData = new Dictionary<string, List<string>>();
-
-            // Recorre cada columna
-            for (int i = 0; i < columnNames.Count; i++)
-            {
-                var currentColumn = columnNames[i];
-                var values = new List<string>();
-
-                // Recorre cada fila (excluyendo la primera fila de encabezados)
-                for (int j = 1; j < rowData.Count; j++)
-                {
-                    values.Add(rowData[j][i]);
-                }
-
-                columnData[currentColumn] = values;
-            }
-
-            // Analiza cada columna
-            foreach (var column in columnData)
-            {
-                var values = column.Value;
-                var distinctValues = values.Distinct().ToList();
-                summaryBuilder.AppendLine($"Columna '{column.Key}':");
-                summaryBuilder.AppendLine($"- Total de valores: {values.Count}");
-                summaryBuilder.AppendLine($"- Valores únicos: {distinctValues.Count}");
-
-                // Si la columna tiene valores numéricos, calcula estadísticas
-                if (values.All(v => decimal.TryParse(v, out _)))
-                {
-                    var numericValues = values.Select(decimal.Parse).ToList();
-                    summaryBuilder.AppendLine($"- Suma: {numericValues.Sum()}");
-                    summaryBuilder.AppendLine($"- Promedio: {numericValues.Average()}");
-                    summaryBuilder.AppendLine($"- Máximo: {numericValues.Max()}");
-                    summaryBuilder.AppendLine($"- Mínimo: {numericValues.Min()}");
-                }
-                // Si la columna tiene valores de fecha, calcula el rango de fechas
-                else if (values.All(v => DateTime.TryParse(v, out _)))
-                {
-                    var dateValues = values.Select(DateTime.Parse).ToList();
-                    summaryBuilder.AppendLine($"- Rango de fechas: Desde {dateValues.Min():d} hasta {dateValues.Max():d}");
-                }
-                // Si la columna tiene valores de texto, encuentra el valor más frecuente
-                else
-                {
-                    var mostFrequent = values.GroupBy(v => v)
-                                             .OrderByDescending(g => g.Count())
-                                             .FirstOrDefault()?.Key;
-                    summaryBuilder.AppendLine($"- Valor más frecuente: '{mostFrequent}'");
-                }
-            }
-        }
-        else
-        {
-            summaryBuilder.AppendLine("La consulta no devolvió registros.");
-        }
-
-        return summaryBuilder.ToString();
     }
 }

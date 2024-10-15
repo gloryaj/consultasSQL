@@ -9,6 +9,7 @@
   
   
   <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
     <ProjectReference Include="..\DBChatPro.Client\DBChatPro.Client.csproj" />
     <PackageReference Include="ChromaDBSharp" Version="0.0.1" />
     <PackageReference Include="FaissNet" Version="1.1.0" />

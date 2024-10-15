@@ -23,7 +23,7 @@ namespace DBChatPro.Services
 
             if (string.IsNullOrEmpty(apiKey))
             {
-                throw new Exception("OpenAI API Key not found in configuration.");
+                throw new Exception("[ GetAISQLQuery ] OpenAI API Key not found in configuration.");
             }
 
             var api = new OpenAIClient(apiKey);
@@ -34,8 +34,10 @@ namespace DBChatPro.Services
             var builder = new StringBuilder();
 
              // Prompt para la generación de la consulta SQL
-             builder.AppendLine("You are an expert assistant who knows how to write expert queries in Microsoft SQL Server. The commands to use must work fine in SQL Server. All the queries must use T-SQL commands. Do not respond with any information unrelated to databases or queries.");
-             builder.AppendLine("Use the following database schema when creating your answers:");
+            builder.AppendLine("You are an expert assistant who knows how to write expert queries in Microsoft SQL Server. ");
+            builder.AppendLine("The commands to use must work fine in SQL Server. All the queries must use T-SQL commands. ");
+            builder.AppendLine("Do not respond with any information unrelated to databases or queries.");
+            builder.AppendLine("Use the following database schema when creating your answers:");
             
             foreach (var table in aiConnection.SchemaRaw)
             {
@@ -45,6 +47,7 @@ namespace DBChatPro.Services
             builder.AppendLine("Include column name headers in the query results.");
             builder.AppendLine("Always provide your answer in the JSON format below:");
             builder.AppendLine(@"{ ""summary"": ""your-summary"", ""query"":  ""your-query"" }");
+            //builder.AppendLine(@"{ ""query"":  ""your-query"" }");
             builder.AppendLine("Output ONLY JSON formatted on a single line. Do not use new line characters.");
             builder.AppendLine(@"In the preceding JSON response, substitute ""your-query"" with a Microsoft SQL Server Query to retrieve the requested data.");
             builder.AppendLine("Do not use MySQL or PostgreSQL syntax.");
@@ -63,7 +66,7 @@ namespace DBChatPro.Services
             }
             catch (Exception e)
             {
-              throw new Exception("Failed to parse AI response as a SQL Query. The AI response was: " + response.Value.Content[0].Text);
+              throw new Exception("[ GetAISQLQuery ]  Failed to parse AI response as a SQL Query. The AI response was: " + response.Value.Content[0].Text);
             }
         }
 
@@ -73,7 +76,7 @@ namespace DBChatPro.Services
 
             if (string.IsNullOrEmpty(apiKey))
             {
-                throw new Exception("OpenAI API Key not found in configuration.");
+                throw new Exception("[ AnalyzeQueryResults ] OpenAI API Key not found in configuration.");
             }
 
             var api = new OpenAIClient(apiKey);
@@ -81,6 +84,15 @@ namespace DBChatPro.Services
 
             List<ChatMessage> chatHistory = new List<ChatMessage>();
             var builder = new StringBuilder();
+
+            //builder.AppendLine("The user provided the following request for analysis: ");
+            //builder.AppendLine(userPrompt);
+            //builder.AppendLine("Now that I have the data from the SQL query:");
+            //builder.AppendLine(queryResult);
+            //builder.AppendLine("Analyze the following data in Spanish, strictly focusing on what the user has specifically requested. The analysis must be based solely on the data provided, without adding information or making assumptions that cannot be directly inferred from the data.");
+            //builder.AppendLine(@"The result must be formatted as:");
+            //builder.AppendLine(@"{ ""AnalysisSummary"": ""The analysis based on the user's specific request will appear here."" }");
+            //builder.AppendLine("Output ONLY this JSON structure in a single line with the actual analysis replacing the placeholder text in the 'AnalysisSummary' property.");
 
             builder.AppendLine("The user provided the following request for analysis: ");
             builder.AppendLine(userPrompt);  
@@ -108,8 +120,8 @@ namespace DBChatPro.Services
             }
             catch (Exception e)
             {
-                Console.WriteLine("Failed to parse JSON: " + e.Message);
-                throw new Exception("Failed to parse AI response as an analysis. The AI response was: " + analysisResponse.Value.Content[0].Text);
+                Console.WriteLine("[ AnalyzeQueryResults ] Failed to parse JSON: " + e.Message);
+                throw new Exception("[ AnalyzeQueryResults ] Failed to parse AI response as an analysis. The AI response was: " + analysisResponse.Value.Content[0].Text);
             }
         }
     }

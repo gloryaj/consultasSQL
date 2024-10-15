@@ -5,8 +5,17 @@
 @using System.Text
 @using DBChatPro.Models
 @using System.Data
+
+
 @inject ISnackbar Snackbar
 @inject OpenAIService OpenAIService
+
+
+@inject IJSRuntime JSRuntime
+
+
+
+
 <PageTitle>Home</PageTitle>
 <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Fixed="false">
     <MudGrid Class="my-2">
@@ -21,7 +30,7 @@
             // Main data query area
             <MudItem xs="12">
                 <h1>
-                    Chat with your database
+                    Realice consultas de sus datos en lenguaje natural
                     <div style="float: right">
                         <MudIconButton OnClick="@(() => ToggleDrawer(Anchor.End))" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
                     </div>
@@ -30,7 +39,7 @@
                 <MudGrid>
                     <MudItem xs="8">
                         <p>
-                            Selected Database:
+                            Base de datos seleccionada:
                             <MudMenu Label="@ActiveConnection.Name" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" IconColor="Color.Secondary">
                                 @foreach (var db in Connections)
                                 {
@@ -45,6 +54,8 @@
                             <div>
                                 <MudButton Class="my-6" Variant="Variant.Filled" ButtonType="ButtonType.Submit" Color="Color.Primary">Consultar</MudButton>
                             </div>
+
+
                         </EditForm>
                         @if (Loading)
                         {
@@ -82,7 +93,7 @@
                     <MudTabPanel Text="Resultados">
                         @if (RowData.Count > 0)
                         {
-                            <MudTable SortLabel="Sort By" Items="@RowData.Skip(1)" Dense="@dense" Bordered="@bordered" Striped="@striped">
+                            <MudTable SortLabel="Sort By" Items="@RowData.Skip(1)" RowsPerPage="100" Dense="@dense" Bordered="@bordered" Striped="@striped">
                                 <HeaderContent>
                                     @foreach (var item in RowData.FirstOrDefault())
                                     {
@@ -104,6 +115,14 @@
                                 <MudSwitch @bind-Checked="@striped" Color="Color.Tertiary">Striped</MudSwitch>
                                 <MudSwitch @bind-Checked="@bordered" Color="Color.Warning">Bordered</MudSwitch>
                                 <MudFab @onclick="SaveFavorite" Style="justify-content: flex-end" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Favorite" Label="Favorite" />
+
+
+                                <! - AQUÍ NUEVO BOTÓN para exportar a Excel *************** ->
+                                <MudButton OnClick="ExportData" Color="Color.Primary" Variant="Variant.Filled" Class="mt-2">
+                                    Exportar a Excel
+                                </MudButton>
+
+
                             </div>
                         }
                         else
@@ -111,6 +130,7 @@
                             <p>No data to show.</p>
                         }
                     </MudTabPanel>
+
                     <MudTabPanel Text="Editor SQL">
                         <div>
                             <MudTextField @bind-Value="@Query" Text="@Query" T="string" Label="Edit generated query" Variant="Variant.Text" Lines="5" />
@@ -118,13 +138,16 @@
                         <div>
                             <MudButton @onclick="EditQuery" Class="my-6" Variant="Variant.Filled" Color="Color.Primary">Execute</MudButton>
                         </div>
+
                     </MudTabPanel>
-                    <MudTabPanel Text="Resumen">
+                 
+                    <MudTabPanel Text="Query validada">
                         @if (!string.IsNullOrEmpty(Summary))
                         {
                             <p Class="my-6">@Summary</p>
                         }
                     </MudTabPanel>
+
                     <MudTabPanel Text="Analisis de los datos">
                         @if (!string.IsNullOrEmpty(AnalysisSummary))
                         {
@@ -138,8 +161,8 @@
             <MudItem xs="4">
                 <MudDrawer Open="@open" Anchor="Anchor.Right" ClipMode="DrawerClipMode.Always" Elevation="1" Breakpoint="Breakpoint.SmAndUp" Width="25%" Variant="@DrawerVariant.Persistent">
                     <MudTabs KeepPanelsAlive="true" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
-                        <MudTabPanel Text="Schema">
-                            <p class="ml-6 mb-6">Browse the tables and columns for <b>@ActiveConnection.Name</b></p>
+                        <MudTabPanel Text="Esquema BD">
+                            <p class="ml-6 mb-6">Navegue por las tablas y columnas de <b>@ActiveConnection.Name</b></p>
                             <MudTreeView T="string">
                                 @foreach (var table in ActiveConnection.SchemaStructured)
                                 {
@@ -152,7 +175,7 @@
                                 }
                             </MudTreeView>
                         </MudTabPanel>
-                        <MudTabPanel Text="History">
+                        <MudTabPanel Text="Histórico">
                             @if (History.Count > 0)
                             {
                                 <p class="mb-6">Query history for <b>@ActiveConnection.Name</b></p>
@@ -172,7 +195,7 @@
                                 <p class="mb-6">You haven't run any prompts yet.</p>
                             }
                         </MudTabPanel>
-                        <MudTabPanel Text="Favorites">
+                        <MudTabPanel Text="Favoritos">
                             @if (Favorites.Count > 0)
                             {
                                 <p class="mb-6">Your saved queries for <b>@ActiveConnection.Name</b></p>
@@ -198,6 +221,10 @@
         }
     </MudGrid>
 </MudContainer>
+
+   
+
+
 @code {
     // Table styling
     private bool dense = false;
@@ -207,6 +234,7 @@
 
     // Form data
     public FormModel FmModel { get; set; } = new FormModel();
+    public ExcelService excelService = new ExcelService();
 
     // General UI data
     private bool Loading = false;
@@ -269,6 +297,48 @@
         RowData = DatabaseService.GetDataTable(ActiveConnection, Query);
         Snackbar.Add("Results updated.", Severity.Success);
     }
+
+
+
+    //  EXPORTAR DATOS A EXCEL ******************************************
+    private async Task ExportData()
+    {
+        var dataTable = ConvertRowDataToDataTable();
+        var fileBytes = excelService.ExportToExcel(dataTable, "DatosExportados");
+        var fileName = "DatosExportados.xlsx";
+
+        // Descargar el archivo
+        var base64 = Convert.ToBase64String(fileBytes);
+        var url = $"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64}";
+        await JSRuntime.InvokeVoidAsync("downloadFile", url, fileName);
+    }
+
+    //  EXPORTAR DATOS A EXCEL ******************************************
+    private DataTable ConvertRowDataToDataTable()
+    {
+        var dataTable = new DataTable();
+
+        // Agregar las columnas
+        var headers = RowData.FirstOrDefault();
+        if (headers != null)
+        {
+            foreach (var header in headers)
+            {
+                dataTable.Columns.Add(header);
+            }
+        }
+
+        // Agregar las filas de datos
+        var dataRows = RowData.Skip(1); // Omitir los encabezados
+        foreach (var row in dataRows)
+        {
+            dataTable.Rows.Add(row.ToArray());
+        }
+
+        return dataTable;
+    }
+
+
 
     public void LoadDatabase(string dbName)
     {
@@ -388,3 +458,8 @@
         return stringBuilder.ToString();
     }
 }
+
+}
+
+
+    

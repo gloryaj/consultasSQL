@@ -27,6 +27,9 @@ builder.Services.AddMudServices(config =>
 builder.Services.AddSingleton<OpenAIService>();
 var app = builder.Build();
 
+// Registrar ExcelService
+builder.Services.AddTransient<ExcelService>(); 
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

@@ -9,6 +9,8 @@
   
   
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.1" />
+    <PackageReference Include="EPPlus" Version="7.4.1" />
     <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
     <ProjectReference Include="..\DBChatPro.Client\DBChatPro.Client.csproj" />
     <PackageReference Include="ChromaDBSharp" Version="0.0.1" />

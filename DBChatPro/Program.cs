@@ -24,6 +24,19 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
 
+// Registrar la configuración
+builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
+// Registrar MongoDBService con las configuraciones necesarias
+builder.Services.AddSingleton<MongoDBService>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var connectionString = configuration["MongoDB:ConnectionString"];
+    var databaseName = configuration["MongoDB:Database"];
+    return new MongoDBService(connectionString, databaseName);
+});
+
+
 builder.Services.AddSingleton<OpenAIService>();
 var app = builder.Build();
 

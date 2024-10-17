@@ -4,16 +4,68 @@ using System.Text;
 using OpenAI.Chat;
 using OpenAI;
 using DBChatPro.Models;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using OpenAI.Embeddings;
+using MongoDB.Driver;
 
 namespace DBChatPro.Services
 {
     public class OpenAIService
     {
         private readonly IConfiguration _configuration;
+        private readonly OpenAIClient _client;
+        private readonly string _apiKey;
 
-        public OpenAIService(IConfiguration configuration)
+        public OpenAIService(IConfiguration configuration, MongoDBService mongoService)
         {
             _configuration = configuration;
+
+            _apiKey = _configuration["OpenAI:ApiKey"];
+            _client = new OpenAIClient(_apiKey);
+        }
+
+        public async Task<float[]> GenerateEmbeddingsAsync(string text)
+        {
+            var embeddingClient = _client.GetEmbeddingClient("text-embedding-ada-002");
+
+            OpenAIEmbedding embedding = await embeddingClient.GenerateEmbeddingAsync(text);
+
+            // Convertir la incrustación a un arreglo de flotantes
+            return embedding.ToFloats().ToArray();
+        }
+
+        public async Task<float[]> GenerateEmbeddingsFromFile(string filePath)
+        {
+            FileService fileService = new FileService();
+
+            string text = fileService.ReadTextFile(filePath);
+
+            return await GenerateEmbeddingsAsync(text);
+        }
+
+        public async Task SaveEmbeddingsToMongo(string filePath, string collectionName)
+        {
+            float[] embeddings = await GenerateEmbeddingsFromFile(filePath);
+            Console.WriteLine("Embeddings: " + embeddings);
+
+            string connectionString = _configuration["MongoDB:ConnectionString"];
+            string dbName = _configuration["MongoDB:Database"];
+            Console.WriteLine("string conection:" + connectionString);
+            Console.WriteLine("nombre base de datos: " + dbName);
+
+            var mongoService = new MongoDBService(connectionString, dbName);
+
+            // Crear un documento para almacenar en la colección
+            var document = new
+            {
+                FilePath = filePath,
+                Embeddings = embeddings,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            //Insertar el documento en la colección de MongoDB
+            await mongoService.InsertDocument(collectionName, document);
+            Console.WriteLine("Embeddings guardados exitosamente en MongoDB. y document es: "+ document);
         }
 
         public async Task<AIQuery> GetAISQLQuery(string userPrompt, AIConnection aiConnection)

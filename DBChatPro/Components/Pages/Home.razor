@@ -309,6 +309,23 @@
     {
         try
         {
+
+            Loading = true;
+            LoadingMessage = "Generando incrustaciones y guardando en MongoDB...";
+
+            // Generar y guardar embeddings en MongoDB
+            string filePath = "Data/Database.txt";
+
+            if (File.Exists(filePath))
+            {
+                await OpenAIService.SaveEmbeddingsToMongo(filePath, "EmbeddingsCollection");
+                Console.WriteLine("Si encontro el archivo data.txt");
+            }
+            else
+            {
+                Console.WriteLine("El archivo no existe en la ruta especificada.");
+            }
+
             Loading = true;
             LoadingMessage = "Getting the AI query...";
 
